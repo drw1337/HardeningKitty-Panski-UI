@@ -1,0 +1,15 @@
+# Laufzeitdaten und Eigenes des Benutzers – gehören nicht ins Repo
+Programm/
+Archiv/
+
+# Build-Ergebnis (die EXE gibt es als Release-Download)
+*.exe
+*.pdb
+
+# Quellbilder für Symbole liegen außerhalb des Repos
+*Katzenwappen*.png
+*Markenrichtlinien*.png
+
+# Windows-Müll
+Thumbs.db
+desktop.ini
