@@ -27,8 +27,8 @@ using MeynTools;
 [assembly: AssemblyCompany("Maximilian Meyn")]
 [assembly: AssemblyProduct("HardeningKitty Panski UI")]
 [assembly: AssemblyCopyright("© 2026 Maximilian Meyn")]
-[assembly: AssemblyVersion("3.2.0.0")]
-[assembly: AssemblyFileVersion("3.2.0.0")]
+[assembly: AssemblyVersion("3.2.1.0")]
+[assembly: AssemblyFileVersion("3.2.1.0")]
 
 namespace HardeningKittyUI
 {
@@ -119,9 +119,9 @@ namespace HardeningKittyUI
                                         "Check Windows hardening, fix it selectively and keep it in place"), new Size(1040, 620), true)
         {
             AppHost.Credits.Clear();
-            AppHost.AddCredit("HardeningKitty", T("Prüflogik und Prüflisten stammen aus HardeningKitty von Michael Schneider und der scip AG (MIT-Lizenz). " +
+            AppHost.AddCredit("HardeningKitty", T("Prüflogik und Prüflisten stammen aus HardeningKitty von Michael Schneider und scipag (MIT-Lizenz). " +
                                                   "Vielen Dank! Verbesserungen, neue Prüflisten und Fehlermeldungen gern direkt im Projekt beitragen.",
-                                                  "The checks and finding lists come from HardeningKitty by Michael Schneider and scip AG (MIT license). " +
+                                                  "The checks and finding lists come from HardeningKitty by Michael Schneider and scipag (MIT license). " +
                                                   "Thank you! Improvements, new finding lists and bug reports are welcome directly in the project."), KittyRepo);
 
             var tabs = new TabControl { Location = new Point(20, 8), Size = new Size(1040, 632), Padding = new Point(14, 5), Anchor = All };
@@ -237,7 +237,7 @@ namespace HardeningKittyUI
         {
             Panel p = Make.Page(PageSize);
             Put(p, Make.Section("HardeningKitty", X, 12, 130), TL);
-            Put(p, Make.Link(T("von scip AG auf GitHub", "by scip AG on GitHub"), KittyRepo, 146, 15), TL);
+            Put(p, Make.Link(T("scipag auf GitHub", "scipag on GitHub"), KittyRepo, 146, 15), TL);
             lblKitty = Put(p, new StatusText { Location = new Point(X, 38), Size = new Size(W - 190, 40), BackColor = Theme.Background, Text = "…" }, TLR);
             btnUpdate = Put(p, Make.Secondary(T("Auf Updates prüfen", "Check for updates"), X + W - 180, 36, 180, 32), TR);
             btnUpdate.Click += (s, e) => OnUpdate();
