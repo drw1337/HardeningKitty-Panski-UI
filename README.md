@@ -10,17 +10,35 @@ It checks Windows hardening, classifies open findings, fixes them selectively, a
 
 > Dedicated to Panski † – *Gewidmet Panski †*
 
+> **Note:** This is an independent community project. It is not affiliated with, endorsed by or supported by
+> scip AG or the HardeningKitty project. Please report issues with this UI here, not to HardeningKitty.
+
 ![Audit tab](docs/screenshots/1-audit.png)
 
 ## Features
 
 - **Audit:** HardeningKitty audit with the matching finding list for your OS, score, history and CSV export.
-  On request, HardeningKitty is downloaded from GitHub and its Authenticode signature (scip AG) is verified.
+  On request, HardeningKitty is downloaded from its official GitHub releases and its Authenticode signature is verified.
 - **Fix:** Apply findings by classification (safe, needs review, manual). A restore point is created before
   any change, and a backup can be restored.
 - **Privacy:** 18 groups covering registry policies, services and scheduled tasks, with backup, check and restore.
 - **Automation:** a scheduled task running as SYSTEM (by default on the 3rd Wednesday at 12:00), also runnable via `/auto`.
 - German and English UI, switchable at runtime.
+
+## How it uses HardeningKitty
+
+The UI does not replace or modify HardeningKitty. It is a front end that calls the original PowerShell module.
+
+- HardeningKitty is **not bundled** with the EXE. The UI downloads a release of
+  [scipag/HardeningKitty](https://github.com/scipag/HardeningKitty) (tag archive from GitHub) into its own program folder.
+  It requires a valid Authenticode signature on `HardeningKitty.psm1` (the signer is written to the log) and keeps the files unchanged,
+  including the original `LICENSE` and `README.md`.
+- **Audit** runs `Invoke-HardeningKitty -Mode Audit` with the unchanged finding lists. The score is calculated the same way as in HardeningKitty.
+- **Fix** writes a subset of the selected finding list (selected rows only, copied unchanged) and passes it to
+  `Invoke-HardeningKitty -Mode HailMary` (with `-AllowCustomList` from HardeningKitty 0.9.4 on).
+  Before that, the UI creates its own backup of the affected settings and, optionally, a restore point.
+- Items that HailMary cannot apply as intended (for example checks with operators such as `!=` or `contains`) are marked *manual*.
+- The **Privacy** groups are a separate addition by this UI and are not part of HardeningKitty.
 
 ## Screenshots
 
@@ -65,8 +83,9 @@ certutil -hashfile HardeningKittyUI.exe SHA256
 
 ## Important notes
 
-- The application needs **administrator rights** and **changes system settings**. Fixing, privacy changes and automation
-  are meant to be used only with the restore point and backup in place. Try them in a VM or test environment first.
+- The application needs **administrator rights** and **changes system settings**. Audit, fix, privacy changes, restore and
+  automation have been tested on Windows 11 (25H2). Hardening can still break things on your particular system, so keep
+  the restore point and backup enabled and, ideally, try it in a VM or test environment first.
 - The EXE is **not signed**. Windows SmartScreen may show "Windows protected your PC" – click *More info* → *Run anyway*.
   Antivirus software may also warn about it.
 - The UI was built for personal use. You are free to fork and adapt it.
@@ -96,5 +115,7 @@ MIT License, see [LICENSE](LICENSE).
 
 ## Credits
 
-- Checks and finding lists: [HardeningKitty](https://github.com/scipag/HardeningKitty) by Michael Schneider and scipag (MIT license).
+- Checks and finding lists: [HardeningKitty](https://github.com/scipag/HardeningKitty) by Michael Schneider and scip AG (MIT license),
+  developed in the [Windows Hardening project](https://github.com/0x6d69636b/windows_hardening). Thank you!
+- "HardeningKitty" is the name of their project. It is used here only to describe what this UI works with.
 - Development: Maximilian Meyn
