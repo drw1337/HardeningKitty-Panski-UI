@@ -1,6 +1,6 @@
 # HardeningKitty Panski UI
 
-A Windows GUI for [HardeningKitty](https://github.com/scipag/HardeningKitty) by scipag.
+A Windows GUI for [HardeningKitty](https://github.com/scipag/HardeningKitty) by scip AG.
 It checks Windows hardening, classifies open findings, fixes them selectively, and can roll the changes back.
 
 [![Latest release](https://img.shields.io/github/v/release/drw1337/HardeningKitty-Panski-UI)](../../releases/latest)
@@ -18,7 +18,7 @@ It checks Windows hardening, classifies open findings, fixes them selectively, a
 ## Features
 
 - **Audit:** HardeningKitty audit with the matching finding list for your OS, score, history and CSV export.
-  On request, HardeningKitty is downloaded from its official GitHub releases and its Authenticode signature is verified.
+  On request, HardeningKitty is downloaded from its official GitHub releases and its Authenticode signature (scip AG) is verified.
 - **Fix:** Apply findings by classification (safe, needs review, manual). A restore point is created before
   any change, and a backup can be restored.
 - **Privacy:** 18 groups covering registry policies, services and scheduled tasks, with backup, check and restore.
@@ -31,7 +31,7 @@ The UI does not replace or modify HardeningKitty. It is a front end that calls t
 
 - HardeningKitty is **not bundled** with the EXE. The UI downloads a release of
   [scipag/HardeningKitty](https://github.com/scipag/HardeningKitty) (tag archive from GitHub) into its own program folder.
-  It requires a valid Authenticode signature on `HardeningKitty.psm1` (the signer is written to the log) and keeps the files unchanged,
+  It requires a valid Authenticode signature by scip AG on `HardeningKitty.psm1` (otherwise nothing is installed) and keeps the files unchanged,
   including the original `LICENSE` and `README.md`.
 - **Audit** runs `Invoke-HardeningKitty -Mode Audit` with the unchanged finding lists. The score is calculated the same way as in HardeningKitty.
 - **Fix** writes a subset of the selected finding list (selected rows only, copied unchanged) and passes it to

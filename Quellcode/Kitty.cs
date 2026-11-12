@@ -570,7 +570,18 @@ namespace HardeningKittyUI
 
         static readonly Guid GenericVerifyV2 = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
-        // Liefert eine Beschreibung bei gültiger Signatur, sonst Ausnahme mit Erklärung
+        // HardeningKitty ist von scip AG signiert (Zertifikat „CN=scip ag, O=scip ag, …, C=CH“).
+        // Eine gültige Signatur allein reicht nicht – sie muss auch von scip AG stammen.
+        const string ExpectedOrg = "scip ag", ExpectedCountry = "CH";
+
+        // Einzelnes Feld (z. B. „O“) aus einem Distinguished Name, Werte ggf. in Anführungszeichen
+        static string DnField(string dn, string key)
+        {
+            Match m = Regex.Match(dn ?? "", @"(?:^|,)\s*" + key + @"=(""[^""]*""|[^,]*)");
+            return m.Success ? m.Groups[1].Value.Trim().Trim('"').Trim() : "";
+        }
+
+        // Liefert eine Beschreibung bei gültiger Signatur von scip AG, sonst Ausnahme mit Erklärung
         public static string Verify(string path)
         {
             var file = new FileInfoData { pcwszFilePath = path };
@@ -583,11 +594,28 @@ namespace HardeningKittyUI
             }
             finally { Marshal.FreeHGlobal(pFile); }
 
-            string signer = "";
-            try { signer = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)).GetNameInfo(X509NameType.SimpleName, false); }
+            string signer = "", subject = "";
+            try
+            {
+                var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+                signer = cert.GetNameInfo(X509NameType.SimpleName, false);
+                subject = cert.Subject;
+            }
             catch (Exception ex) { Log.Write("  Signaturgeber nicht lesbar: " + ex.Message); }
 
-            if (rc == 0) return "gültig" + (signer != "" ? ", signiert von " + signer : "");   // nur fürs Log
+            if (rc == 0)
+            {
+                string org = DnField(subject, "O"), country = DnField(subject, "C");
+                if (string.Equals(org, ExpectedOrg, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(country, ExpectedCountry, StringComparison.OrdinalIgnoreCase))
+                    return "gültig, signiert von " + signer + " (" + subject + ")";   // nur fürs Log
+
+                Log.Write("  Unerwarteter Signaturgeber: " + (subject != "" ? subject : "(unbekannt)"));
+                string who = signer != "" ? signer : (subject != "" ? subject : Lang.T("unbekannt", "unknown"));
+                throw new InvalidOperationException(Lang.T("Signaturprüfung fehlgeschlagen: Die Datei ist gültig signiert, aber nicht von scip AG (Signaturgeber: ",
+                                                           "Signature check failed: The file has a valid signature, but not from scip AG (signer: ") + who + ").\n" +
+                                                    Lang.T("Aus Sicherheitsgründen wurde nichts installiert.", "For security reasons nothing was installed."));
+            }
             string code = "0x" + ((uint)rc).ToString("X8");
             string why;
             switch ((uint)rc)

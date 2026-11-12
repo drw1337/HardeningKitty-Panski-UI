@@ -1,5 +1,5 @@
 // HardeningKitty Panski UI – gewidmet meinem Kater Panski († 29.07.2026)
-// Prüft die Windows-Härtung mit HardeningKitty (scipag), stuft die offenen Punkte ein und behebt sie gezielt –
+// Prüft die Windows-Härtung mit HardeningKitty (scip AG), stuft die offenen Punkte ein und behebt sie gezielt –
 // mit Sicherung vorher, Prüfung danach und einer Automatik, die Rücksetzungen durch Windows-Updates erkennt.
 //
 // Reiter:
@@ -27,8 +27,8 @@ using MeynTools;
 [assembly: AssemblyCompany("Maximilian Meyn")]
 [assembly: AssemblyProduct("HardeningKitty Panski UI")]
 [assembly: AssemblyCopyright("© 2026 Maximilian Meyn")]
-[assembly: AssemblyVersion("3.2.1.0")]
-[assembly: AssemblyFileVersion("3.2.1.0")]
+[assembly: AssemblyVersion("3.2.2.0")]
+[assembly: AssemblyFileVersion("3.2.2.0")]
 
 namespace HardeningKittyUI
 {
@@ -119,9 +119,9 @@ namespace HardeningKittyUI
                                         "Check Windows hardening, fix it selectively and keep it in place"), new Size(1040, 620), true)
         {
             AppHost.Credits.Clear();
-            AppHost.AddCredit("HardeningKitty", T("Prüflogik und Prüflisten stammen aus HardeningKitty von Michael Schneider und scipag (MIT-Lizenz). " +
+            AppHost.AddCredit("HardeningKitty", T("Prüflogik und Prüflisten stammen aus HardeningKitty von Michael Schneider und scip AG (MIT-Lizenz). " +
                                                   "Vielen Dank! Verbesserungen, neue Prüflisten und Fehlermeldungen gern direkt im Projekt beitragen.",
-                                                  "The checks and finding lists come from HardeningKitty by Michael Schneider and scipag (MIT license). " +
+                                                  "The checks and finding lists come from HardeningKitty by Michael Schneider and scip AG (MIT license). " +
                                                   "Thank you! Improvements, new finding lists and bug reports are welcome directly in the project."), KittyRepo);
 
             var tabs = new TabControl { Location = new Point(20, 8), Size = new Size(1040, 632), Padding = new Point(14, 5), Anchor = All };
@@ -237,7 +237,7 @@ namespace HardeningKittyUI
         {
             Panel p = Make.Page(PageSize);
             Put(p, Make.Section("HardeningKitty", X, 12, 130), TL);
-            Put(p, Make.Link(T("scipag auf GitHub", "scipag on GitHub"), KittyRepo, 146, 15), TL);
+            Put(p, Make.Link(T("scip AG auf GitHub", "scip AG on GitHub"), KittyRepo, 146, 15), TL);
             lblKitty = Put(p, new StatusText { Location = new Point(X, 38), Size = new Size(W - 190, 40), BackColor = Theme.Background, Text = "…" }, TLR);
             btnUpdate = Put(p, Make.Secondary(T("Auf Updates prüfen", "Check for updates"), X + W - 180, 36, 180, 32), TR);
             btnUpdate.Click += (s, e) => OnUpdate();
