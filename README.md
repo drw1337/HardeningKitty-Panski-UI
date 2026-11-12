@@ -106,7 +106,8 @@ but it needs the master image (not included in the repo) and the IconSet tool. Y
 
 ## Contributing
 
-This is a personal project, so pull requests are disabled. Issues and discussions are open for bug reports, questions and ideas.
+This is a personal project. Pull requests are welcome as suggestions; I review each one and decide whether to merge it.
+For larger changes, please open an issue or discussion first. Issues and discussions are open for bug reports, questions and ideas.
 Forking is explicitly welcome, under the terms of the license.
 
 ## Security
