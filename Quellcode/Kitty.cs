@@ -297,6 +297,7 @@ namespace HardeningKittyUI
         public bool IsOwnCopy;
         public string Manifest { get { return Path.Combine(Folder, "HardeningKitty.psd1"); } }
         public string ListsFolder { get { return Path.Combine(Folder, "lists"); } }
+        public string ModuleFile { get { return Path.Combine(Folder, "HardeningKitty.psm1"); } }
         // Ab 0.9.4 verweigert HailMary veränderte Listen (unsere Teilliste) ohne -AllowCustomList
         public bool NeedsAllowCustomList { get { return Kitty.CompareVersions(Version, "0.9.4") >= 0; } }
     }
@@ -448,7 +449,26 @@ namespace HardeningKittyUI
 
         static string Invoke(KittyModule m, string args)
         {
-            return "Import-Module " + Q(m.Manifest) + " -Force -ErrorAction Stop; Invoke-HardeningKitty " + args + " -SkipLanguageWarning";
+            return Import(m) + "; Invoke-HardeningKitty " + args + " -SkipLanguageWarning";
+        }
+
+        // Scheitert der Import, steht die eigentliche Ursache oft nur in der inneren Ausnahme (z. B. Datei gesperrt/fehlt).
+        // Der Typname der äußeren Ausnahme (PSSecurityException) dient PowerShell.Run zur Erkennung.
+        static string Import(KittyModule m)
+        {
+            return "try { Import-Module " + Q(m.Manifest) + " -Force -ErrorAction Stop } " +
+                   "catch { $e = $_.Exception; $t = $e.GetType().Name + ': ' + $e.Message; while ($e.InnerException) { $e = $e.InnerException; $t += ' -> ' + $e.GetType().Name + ': ' + $e.Message }; " +
+                   "Write-Output ('" + ImportFailed + "' + $t); exit 1 }";
+        }
+
+        public const string ImportFailed = "[!] Import-Module: ";
+
+        // Lädt das Modul probeweise. Wirft UntrustedPublisherException, wenn PowerShell den Herausgeber nicht akzeptiert.
+        public static void LoadTest(KittyModule m)
+        {
+            string output = PowerShell.Run(Import(m) + "; 'Import OK'", null);
+            if (!output.Contains("Import OK"))
+                throw new InvalidOperationException(Lang.T("HardeningKitty lässt sich nicht laden:\n", "HardeningKitty cannot be loaded:\n") + FirstLines(output, 6));
         }
 
         public static string Audit(KittyModule m, string list, string report, bool withInfo, Action<string> onLine)
@@ -477,6 +497,12 @@ namespace HardeningKittyUI
         {
             var lines = output.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("[!]") && !l.Contains(" ID ")).ToList();
             return string.Join("\n", lines.Take(3).Select(l => Regex.Replace(l, @"^\[!\]\s*[\d\.\:/ ]+-\s*", "")));
+        }
+
+        // Erste nicht leere Zeilen der Ausgabe – z. B. eine PowerShell-Fehlermeldung, wenn Import-Module scheitert
+        public static string FirstLines(string output, int count)
+        {
+            return string.Join("\n", output.Split('\n').Select(l => l.Trim()).Where(l => l != "").Take(count));
         }
     }
 
@@ -530,9 +556,22 @@ namespace HardeningKittyUI
                 Log.Write("  beendet mit Code " + p.ExitCode + ", " + output.Split('\n').Length + " Zeilen Ausgabe");
                 string errors = Kitty.Errors(output);
                 if (errors != "") Log.Write("  Meldungen: " + errors.Replace("\n", " | "));
+                else if (p.ExitCode != 0) Log.Write("  Ausgabe: " + Kitty.FirstLines(output, 6).Replace("\n", " | "));
+                if (output.Contains(Kitty.ImportFailed + "PSSecurityException")) throw new UntrustedPublisherException();
                 return output;
             }
         }
+    }
+
+    // PowerShell verweigert das Laden von HardeningKitty, weil der Herausgeber (scip AG) nicht als vertrauenswürdig eingetragen ist.
+    // Ohne Fenster (-NonInteractive) kann PowerShell die Rückfrage „Software dieses nicht vertrauenswürdigen Herausgebers ausführen?“ nicht stellen.
+    class UntrustedPublisherException : InvalidOperationException
+    {
+        public UntrustedPublisherException() : base(Lang.T(
+            "PowerShell lädt HardeningKitty auf diesem Rechner nicht, weil der Herausgeber scip AG nicht als vertrauenswürdig eingetragen ist.\n" +
+            "Starte das Programm und eine Prüfung von Hand – es bietet dann an, scip AG einzutragen.",
+            "PowerShell does not load HardeningKitty on this computer because the publisher scip AG is not registered as trusted.\n" +
+            "Start the program and run an audit manually – it will then offer to register scip AG.")) { }
     }
 
     // Prüft die Authenticode-Signatur einer Datei über die Windows-Vertrauensprüfung (WinVerifyTrust)
@@ -579,6 +618,28 @@ namespace HardeningKittyUI
         {
             Match m = Regex.Match(dn ?? "", @"(?:^|,)\s*" + key + @"=(""[^""]*""|[^,]*)");
             return m.Success ? m.Groups[1].Value.Trim().Trim('"').Trim() : "";
+        }
+
+        public static X509Certificate2 SignerCert(string path)
+        {
+            return new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+        }
+
+        // Trägt das Signaturzertifikat der Datei unter „Vertrauenswürdige Herausgeber“ des Rechners ein –
+        // nur nach erfolgreicher Prüfung (gültige Signatur von scip AG). Rückgängig: certlm.msc.
+        public static void TrustPublisher(string path)
+        {
+            Log.Write("Herausgeber eintragen: Signatur " + Path.GetFileName(path) + ": " + Verify(path));
+            X509Certificate2 cert = SignerCert(path);
+            var store = new X509Store(StoreName.TrustedPublisher, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            try
+            {
+                if (store.Certificates.Find(X509FindType.FindByThumbprint, cert.Thumbprint, false).Count == 0) store.Add(cert);
+            }
+            finally { store.Close(); }
+            Log.Write("  Zertifikat eingetragen in LocalMachine\\TrustedPublisher: " + cert.Subject + ", Fingerabdruck " + cert.Thumbprint +
+                      ", gültig bis " + cert.NotAfter.ToString("dd.MM.yyyy"));
         }
 
         // Liefert eine Beschreibung bei gültiger Signatur von scip AG, sonst Ausnahme mit Erklärung

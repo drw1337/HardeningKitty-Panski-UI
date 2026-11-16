@@ -33,6 +33,9 @@ The UI does not replace or modify HardeningKitty. It is a front end that calls t
   [scipag/HardeningKitty](https://github.com/scipag/HardeningKitty) (tag archive from GitHub) into its own program folder.
   It requires a valid Authenticode signature by scip AG on `HardeningKitty.psm1` (otherwise nothing is installed) and keeps the files unchanged,
   including the original `LICENSE` and `README.md`.
+- If PowerShell on the computer only runs scripts from **trusted publishers** (seen on Windows Server 2025), loading HardeningKitty fails.
+  The UI detects this and, after asking, adds the scip AG certificate (taken from the verified signature) to the computer's
+  *Trusted Publishers* store. Undo: `certlm.msc` → Trusted Publishers → delete the certificate.
 - **Audit** runs `Invoke-HardeningKitty -Mode Audit` with the unchanged finding lists. The score is calculated the same way as in HardeningKitty.
 - **Fix** writes a subset of the selected finding list (selected rows only, copied unchanged) and passes it to
   `Invoke-HardeningKitty -Mode HailMary` (with `-AllowCustomList` from HardeningKitty 0.9.4 on).
@@ -84,7 +87,7 @@ certutil -hashfile HardeningKittyUI.exe SHA256
 ## Important notes
 
 - The application needs **administrator rights** and **changes system settings**. Audit, fix, privacy changes, restore and
-  automation have been tested on Windows 11 (25H2). Hardening can still break things on your particular system, so keep
+  automation have been tested on Windows 11 (25H2); the audit has also been run on Windows Server 2025. Hardening can still break things on your particular system, so keep
   the restore point and backup enabled and, ideally, try it in a VM or test environment first.
 - The EXE is **not signed**. Windows SmartScreen may show "Windows protected your PC" – click *More info* → *Run anyway*.
   Antivirus software may also warn about it.

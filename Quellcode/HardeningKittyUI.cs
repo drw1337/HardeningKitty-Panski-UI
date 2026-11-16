@@ -27,8 +27,8 @@ using MeynTools;
 [assembly: AssemblyCompany("Maximilian Meyn")]
 [assembly: AssemblyProduct("HardeningKitty Panski UI")]
 [assembly: AssemblyCopyright("© 2026 Maximilian Meyn")]
-[assembly: AssemblyVersion("3.2.2.0")]
-[assembly: AssemblyFileVersion("3.2.2.0")]
+[assembly: AssemblyVersion("3.2.3.0")]
+[assembly: AssemblyFileVersion("3.2.3.0")]
 
 namespace HardeningKittyUI
 {
@@ -305,6 +305,7 @@ namespace HardeningKittyUI
         void LoadKitty()
         {
             kitty = Kitty.Find();
+            kittyLoads = false;
             lists = kitty != null ? Catalog.Load(kitty.ListsFolder) : new List<FindingList>();
             recommended = SystemInfo.Recommend(lists);
             if (kitty == null) Log.Write("HardeningKitty nicht gefunden");
@@ -405,6 +406,43 @@ namespace HardeningKittyUI
             chkUser.Enabled = l.MachineFile != null && l.UserFile != null;
         }
 
+        bool kittyLoads;   // Ladetest in dieser Sitzung bestanden
+
+        // Vor dem ersten HardeningKitty-Aufruf: Lädt PowerShell das Modul? Wenn nicht, weil scip AG nicht als
+        // vertrauenswürdiger Herausgeber eingetragen ist, nach Rückfrage eintragen. Läuft im Hintergrund-Thread.
+        void EnsureKittyLoads()
+        {
+            if (kittyLoads) return;
+            try { Kitty.LoadTest(kitty); }
+            catch (UntrustedPublisherException)
+            {
+                var cert = AuthenticodeCheck.SignerCert(kitty.ModuleFile);
+                bool yes = false;
+                Ui(() => yes = MessageBox.Show(this,
+                    T("Windows PowerShell führt auf diesem Rechner nur Skripte vertrauenswürdiger Herausgeber aus. HardeningKitty ist gültig von scip AG signiert, " +
+                      "scip AG ist aber nicht als vertrauenswürdiger Herausgeber eingetragen – deshalb lässt sich HardeningKitty nicht laden.\n\n" +
+                      "Soll das Zertifikat von scip AG für diesen Rechner unter „Vertrauenswürdige Herausgeber“ eingetragen werden?\n" +
+                      "Danach führt PowerShell von diesem Zertifikat signierte Skripte ohne Rückfrage aus (auch für die Automatik).\n\n",
+                      "Windows PowerShell only runs scripts from trusted publishers on this computer. HardeningKitty has a valid signature from scip AG, " +
+                      "but scip AG is not registered as a trusted publisher – so HardeningKitty cannot be loaded.\n\n" +
+                      "Register the scip AG certificate for this computer under \"Trusted Publishers\"?\n" +
+                      "PowerShell will then run scripts signed with this certificate without asking (also for the automation).\n\n") +
+                    T("Zertifikat: ", "Certificate: ") + cert.Subject + "\n" + T("Fingerabdruck: ", "Thumbprint: ") + cert.Thumbprint + "\n" +
+                    T("Gültig bis: ", "Valid until: ") + cert.NotAfter.ToString("dd.MM.yyyy") + "\n\n" +
+                    T("Rückgängig: certlm.msc → Vertrauenswürdige Herausgeber → Zertifikat löschen.", "Undo: certlm.msc → Trusted Publishers → delete the certificate."),
+                    T("Vertrauenswürdiger Herausgeber", "Trusted publisher"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes);
+                if (!yes)
+                {
+                    Log.Write("Herausgeber scip AG nicht eingetragen (vom Benutzer abgelehnt)");
+                    throw new InvalidOperationException(T("Ohne vertrauenswürdigen Herausgeber kann HardeningKitty auf diesem Rechner nicht laufen. Es wurde nichts geändert.",
+                                                          "Without a trusted publisher HardeningKitty cannot run on this computer. Nothing was changed."));
+                }
+                AuthenticodeCheck.TrustPublisher(kitty.ModuleFile);
+                Kitty.LoadTest(kitty);
+            }
+            kittyLoads = true;
+        }
+
         void OnAudit()
         {
             var l = cboList.SelectedItem as FindingList;
@@ -415,6 +453,7 @@ namespace HardeningKittyUI
             RunInBackground(T("Prüfung läuft …", "Audit running …"), () =>
             {
                 Automatik.SyncSettings();
+                EnsureKittyLoads();
                 AuditResult r = Ablauf.Audit(kitty, l, user, s => SetFooterStatus(s));
                 Ui(() => ShowAudit(r));
             });
@@ -664,6 +703,7 @@ namespace HardeningKittyUI
 
         void DoFix(List<Finding> sel, bool restorePoint)
         {
+            EnsureKittyLoads();   // vor dem Wiederherstellungspunkt, damit bei Ablehnung nichts angelegt wird
             string rpMessage = "";
             if (restorePoint)
             {
@@ -724,6 +764,7 @@ namespace HardeningKittyUI
                 return;
             RunInBackground(T("Spiele die Sicherung zurück …", "Restoring the backup …"), () =>
             {
+                if (kitty != null && Directory.GetFiles(folder, "hk_sicherung_*.csv").Length > 0) EnsureKittyLoads();
                 List<string> msgs = Ablauf.Restore(kitty, folder, s => SetFooterStatus(s));
                 if (!Automatik.SyncSettings()) msgs.Add("✘ " + T("Die Änderung konnte nicht in die Automatik übernommen werden (Details im Log).",
                                                                   "The change could not be passed on to the automation (details in the log)."));

@@ -64,6 +64,7 @@ namespace HardeningKittyUI
                 if (!File.Exists(report))
                 {
                     string err = Kitty.Errors(text);
+                    if (err == "") err = Kitty.FirstLines(text, 6);
                     throw new InvalidOperationException(Lang.T("HardeningKitty hat keinen Bericht erzeugt", "HardeningKitty did not create a report") + (err != "" ? ":\n" + err : ".") +
                                                         Lang.T("\n\nDie vollständige Ausgabe steht in:\n", "\n\nThe full output is in:\n") + outputFile);
                 }
